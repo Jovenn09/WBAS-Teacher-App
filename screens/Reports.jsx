@@ -228,9 +228,7 @@ export default function Reports({ navigation }) {
       .select(
         `
       student_id,
-      students (
-        name
-      ),
+      student_name,
       subject_id,
       subjects (
         subject_description
@@ -295,7 +293,7 @@ export default function Reports({ navigation }) {
         renderItem={({ item }) => (
           <ReportCard
             subject={`${item.subject_id} - ${item.subjects.subject_description}`}
-            studentName={item.students.name}
+            studentName={item.student_name}
             date={item.date}
             status={item.attendance_status}
           />

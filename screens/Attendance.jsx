@@ -228,7 +228,6 @@ export default function Attendance({ navigation }) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
-      console.log("getting subjects");
       getHandleSubjects();
     });
 
@@ -266,18 +265,20 @@ export default function Attendance({ navigation }) {
   async function showStudents() {
     setIsFetching(true);
     const students = await supabase
-      .from("students")
+      .from("student_record")
       .select("*")
       .order("name", { ascending: true })
-      .contains("sections", [selectedSection.value])
-      .contains("subjects", [selectedSubjects.value]);
+      .eq("section", selectedSection.value)
+      .eq("subject", selectedSubjects.value);
 
+    console.log(students.data);
     setStudents(students.data);
     const defaultAttendance = students.data.map((student) => ({
       teacher_id: user.id,
-      student_id: student.uuid,
+      student_id: student.id,
       subject_id: selectedSubjects.value,
       section_id: selectedSection.value,
+      student_name: student.name,
       date: format(date, "yyyy/MM/dd"),
       attendance_status: "present",
     }));
@@ -289,11 +290,11 @@ export default function Attendance({ navigation }) {
   async function onSearchChange(value) {
     setIsFetching(true);
     const students = await supabase
-      .from("students")
+      .from("student_record")
       .select("*")
       .order("name", { ascending: true })
-      .contains("sections", [selectedSection.value])
-      .contains("subjects", [selectedSubjects.value])
+      .eq("section", selectedSection.value)
+      .eq("subject", selectedSubjects.value)
       .ilike("name", `%${value}%`);
 
     setStudents(students.data);
@@ -306,15 +307,23 @@ export default function Attendance({ navigation }) {
         throw new Error("You can't take attendance in future date");
 
       setIsSubmitting(true);
-      const attendanceRecord = studentAttendance.map((data) =>
-        absentStudents.includes(data.student_id)
-          ? {
-              ...data,
-              attendance_status: "absent",
-              date: format(date, "yyyy/MM/dd"),
-            }
-          : { ...data, date: format(date, "yyyy/MM/dd") }
-      );
+      // const attendanceRecord = studentAttendance.map((data) =>
+      //   absentStudents.includes(data.student_id)
+      //     ? {
+      //         ...data,
+      //         attendance_status: "absent",
+      //         date: format(date, "yyyy/MM/dd"),
+      //       }
+      //     : { ...data, date: format(date, "yyyy/MM/dd") }
+      // );
+
+      const attendanceRecord = studentAttendance
+        .filter((data) => absentStudents.includes(data.student_id))
+        .map((data) => ({
+          ...data,
+          attendance_status: "absent",
+          date: format(date, "yyyy/MM/dd"),
+        }));
 
       if (attendanceRecord.length === 0) throw new Error("Nothing to submit");
 
@@ -395,13 +404,13 @@ export default function Attendance({ navigation }) {
         data={students}
         renderItem={({ item }) => (
           <StudentCard
-            studentId={item.student_id}
+            studentId={item.id}
             studentName={item.name}
-            uuid={item.uuid}
+            uuid={item.id}
             handleAttendanceStatusChange={handleAttendanceStatusChange}
           />
         )}
-        keyExtractor={(item) => item.uuid}
+        keyExtractor={(item) => item.id}
         ListFooterComponent={
           <View style={{ paddingHorizontal: 16 }}>
             <TouchableOpacity

@@ -6,13 +6,23 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { FlatList } from "react-native-gesture-handler";
 import { supabase } from "../supabase/supabaseClient";
 import { AuthContext } from "../context/AuthContext";
+import AddModal from "../components/student-list/AddModal";
+import { Feather } from "@expo/vector-icons";
+import EditModal from "../components/student-list/EditModal";
+import DeleteModal from "../components/student-list/DeleteModal";
 
-function StudentCard({ studentId, studentName }) {
+function StudentCard({
+  studentId,
+  studentName,
+  onEditHandler,
+  onDeleteHandler,
+}) {
   return (
     <View style={styles.cardContainer}>
       <View style={{ flexDirection: "row", gap: 4 }}>
@@ -27,6 +37,41 @@ function StudentCard({ studentId, studentName }) {
           <Text>{studentName}</Text>
         </ScrollView>
       </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Text style={{ fontWeight: "bold" }}>Action:</Text>
+        <View style={{ flexDirection: "row", gap: 16 }}>
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "#cbe9ff",
+              paddingVertical: 4,
+              paddingHorizontal: 4,
+              borderRadius: 4,
+            }}
+            onPress={() => onEditHandler(studentId, studentName)}
+          >
+            <Text>Edit</Text>
+            <Feather name="edit" size={18} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: "#e84c3d",
+              paddingVertical: 4,
+              paddingHorizontal: 4,
+              borderRadius: 4,
+            }}
+            onPress={() => onDeleteHandler(studentId)}
+          >
+            <Text style={{ color: "white" }}>Delete</Text>
+            <Feather name="trash-2" size={18} color="white" />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -40,7 +85,9 @@ function HeaderComponent({
   setSelectedSubject,
   selectedSubject,
   subjects,
+  setShowAddStudentModal,
 }) {
+  const isDisabled = !(!!selectedSection.value && !!selectedSubject.value);
   return (
     <View style={{ marginBottom: 16 }}>
       <View style={styles.container}>
@@ -74,6 +121,22 @@ function HeaderComponent({
             setSelectedSection(item);
           }}
         />
+      </View>
+      <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: isDisabled ? "grey" : "#a88e03",
+            paddingVertical: 8,
+            borderRadius: 6,
+            opacity: isDisabled ? 0.6 : 1,
+          }}
+          onPress={() => setShowAddStudentModal(true)}
+          disabled={isDisabled}
+        >
+          <Text style={{ textAlign: "center", color: "white" }}>
+            Add Student
+          </Text>
+        </TouchableOpacity>
       </View>
       <View style={{ paddingTop: 26, paddingHorizontal: 16 }}>
         <TextInput
@@ -110,17 +173,36 @@ export default function StudentList({ navigation }) {
     value: "",
   });
 
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  const [studentNum, setStudentNum] = useState("");
+  const [studentName, setStudentName] = useState("");
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const [isFetching, setIsFetching] = useState(false);
+
+  function onEditHandler(id, name) {
+    setStudentNum(id);
+    setStudentName(name);
+    setShowEditStudentModal(true);
+  }
+
+  function onDeleteHandler(id) {
+    setStudentNum(id);
+    setShowDeleteModal(true);
+  }
 
   async function showStudents() {
     setIsFetching(true);
     const students = await supabase
-      .from("students")
+      .from("student_record")
       .select("*")
       .order("name", { ascending: true })
       .ilike("name", `%${search}%`)
-      .contains("sections", [selectedSection.value])
-      .contains("subjects", [selectedSubject.value]);
+      .eq("section", selectedSection.value)
+      .eq("subject", selectedSubject.value);
 
     setStudents(students.data);
 
@@ -134,7 +216,6 @@ export default function StudentList({ navigation }) {
   }, [selectedSection, search, selectedSubject]);
 
   async function getSections() {
-    console.log(selectedSubject);
     const { data, error } = await supabase
       .from("assign")
       .select("section_id")
@@ -199,28 +280,58 @@ export default function StudentList({ navigation }) {
   }, [navigation]);
 
   return (
-    <View>
-      <FlatList
-        ListHeaderComponent={
-          <HeaderComponent
-            sections={sections}
-            setSelectedSection={setSelectedSection}
-            selectedSection={selectedSection}
-            setSearch={setSearch}
-            isFetching={isFetching}
-            setSelectedSubject={setSelectedSubject}
-            selectedSubject={selectedSubject}
-            subjects={subjects}
-          />
-        }
-        data={students}
-        renderItem={({ item }) => (
-          <StudentCard studentId={item.student_id} studentName={item.name} />
-        )}
-        keyExtractor={(item) => item.uuid}
-        onReach
+    <>
+      <View>
+        <FlatList
+          ListHeaderComponent={
+            <HeaderComponent
+              sections={sections}
+              setSelectedSection={setSelectedSection}
+              selectedSection={selectedSection}
+              setSearch={setSearch}
+              isFetching={isFetching}
+              setSelectedSubject={setSelectedSubject}
+              selectedSubject={selectedSubject}
+              subjects={subjects}
+              setShowAddStudentModal={setShowAddStudentModal}
+            />
+          }
+          data={students}
+          renderItem={({ item }) => (
+            <StudentCard
+              studentId={item.id}
+              studentName={item.name}
+              onEditHandler={onEditHandler}
+              onDeleteHandler={onDeleteHandler}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          onReach
+        />
+      </View>
+      <AddModal
+        show={showAddStudentModal}
+        setShow={setShowAddStudentModal}
+        selectedSection={selectedSection.value}
+        selectedSubject={selectedSubject.value}
+        showStudents={showStudents}
       />
-    </View>
+      <EditModal
+        show={showEditStudentModal}
+        setShow={setShowEditStudentModal}
+        currentStudentNum={studentNum}
+        currentStudentName={studentName}
+        showStudents={showStudents}
+      />
+      <DeleteModal
+        show={showDeleteModal}
+        setShow={setShowDeleteModal}
+        currentStudentNum={studentNum}
+        showStudents={showStudents}
+        selectedSection={selectedSection.value}
+        selectedSubject={selectedSubject.value}
+      />
+    </>
   );
 }
 
