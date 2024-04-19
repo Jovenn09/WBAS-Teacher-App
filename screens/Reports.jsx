@@ -193,7 +193,6 @@ export default function Reports({ navigation }) {
   }, [navigation]);
 
   async function getSections() {
-    console.log(selectedSubject);
     const { data, error } = await supabase
       .from("assign")
       .select("section_id")
@@ -251,7 +250,6 @@ export default function Reports({ navigation }) {
     }
 
     const { data, error, count } = await query;
-    console.log("attenndance data", data);
     setReportData(data);
     setIsFetching(false);
   }

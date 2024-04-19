@@ -186,10 +186,6 @@ export default function Attendance({ navigation }) {
     setAbsentStudents((prev) => prev.filter((id) => id !== studentId));
   };
 
-  useEffect(() => {
-    console.log(absentStudents);
-  }, [absentStudents]);
-
   function onChangeDateHandler(event, selectedDate) {
     setShowDatePicker(false);
 
@@ -271,7 +267,6 @@ export default function Attendance({ navigation }) {
       .eq("section", selectedSection.value)
       .eq("subject", selectedSubjects.value);
 
-    console.log(students.data);
     setStudents(students.data);
     const defaultAttendance = students.data.map((student) => ({
       teacher_id: user.id,

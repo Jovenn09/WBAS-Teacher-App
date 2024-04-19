@@ -37,7 +37,6 @@ export default function AddModal({
   async function onAddStudentHandler() {
     try {
       setAdding(true);
-      console.log(studentName, studentNum, selectedSection, selectedSubject);
 
       const { data, error } = await supabase
         .from("student_record")
