@@ -24,6 +24,26 @@ export default function AddModal({
 
   const [adding, setAdding] = useState(false);
 
+  function validateString(input) {
+    const pattern = /^(\d{2})-(\d{4})-(\d{5})$/;
+
+    if (pattern.test(input)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function validateNoNumbers(input) {
+    const pattern = /^[^0-9]+$/;
+
+    if (pattern.test(input)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   const showToastWithGravityAndOffset = (message) => {
     ToastAndroid.showWithGravityAndOffset(
       message,
@@ -38,12 +58,18 @@ export default function AddModal({
     try {
       setAdding(true);
 
+      const isValidId = validateString(studentNum);
+      const isValidName = validateNoNumbers(studentName);
+
+      if (!isValidId) throw new Error("Invalid Student Number");
+      if (!isValidName) throw new Error("Invalid Student Name");
+
       const { data, error } = await supabase
         .from("student_record")
         .insert([
           {
             id: studentNum,
-            name: studentName,
+            name: studentName.toUpperCase(),
             section: selectedSection,
             subject: selectedSubject,
           },
@@ -54,12 +80,13 @@ export default function AddModal({
 
       await showStudents();
       showToastWithGravityAndOffset("Student Successfully Added");
+      setShow(false);
     } catch (error) {
       console.log(error);
       Alert.alert("Something went wrong", error.message);
     } finally {
-      setShow(false);
       setAdding(false);
+      setStudentName("");
     }
   }
 
@@ -71,16 +98,20 @@ export default function AddModal({
       ></View>
       <View pointerEvents="box-none" style={styles.centeredView}>
         <View style={styles.innerContainer}>
+          <Text>Student Number</Text>
           <TextInput
+            keyboardType="number-pad"
+            maxLength={13}
             style={{
               borderWidth: 1,
               borderRadius: 4,
               borderColor: "grey",
               paddingHorizontal: 4,
             }}
-            placeholder="Enter Student Number"
+            placeholder="e.g., 20-2024-02184"
             onChangeText={setStudentNum}
           />
+          <Text>Student Name</Text>
           <TextInput
             style={{
               borderWidth: 1,
@@ -88,7 +119,8 @@ export default function AddModal({
               borderColor: "grey",
               paddingHorizontal: 4,
             }}
-            placeholder="Enter Student Name"
+            placeholder="e.g., SMITH, JAMES"
+            value={studentName}
             onChangeText={setStudentName}
           />
           <TouchableOpacity
